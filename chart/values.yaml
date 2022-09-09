@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=./values.root.schema.json
+
+global:
+  domain: null #removed for github
+  imagePullSecret: { name: container-registry }
+srv:
+  bindings:
+    auth:
+      serviceInstanceName: xsuaa
+    destinations:
+      serviceInstanceName: destinations
+
+  image:
+    repository: dustbit/cc-test-srv
+    tag: latest
+  env:
+    CDS_ENVIRONMENT_K8S_SERVICEBINDINGS_CONNECTIVITY_SECRETSPATH: /bindings/connectivity
+    CDS_ENVIRONMENT_K8S_SERVICEBINDINGS_CONNECTIVITY_SERVICE: connectivity
+  resources:
+    limits:
+      ephemeral-storage: 1G
+      memory: 500M
+    requests:
+      cpu: 500m
+      ephemeral-storage: 1G
+      memory: 500M
+  health_check:
+    liveness:
+      path: /
+    readiness:
+      path: /
+  additionalVolumes:
+    - name: connectivity-secret
+      volumeMount:
+        mountPath: /bindings/connectivity
+        readOnly: true
+      projected:
+        sources:
+          - secret:
+              name: cc-test-connectivity-binding
+              optional: false
+          - secret:
+              name: cc-test-connectivity-binding
+              optional: false
+              items:
+                - key: token_service_url
+                  path: url
+          - configMap:
+              name: cc-test-connectivity-proxy-info
+              optional: false
+xsuaa:
+  serviceOfferingName: xsuaa
+  servicePlanName: application
+  parameters:
+    xsappname: cc-test
+  config: xs-security.json
+connectivity:
+  serviceOfferingName: connectivity
+  servicePlanName: connectivity_proxy
+  secretName: cc-test-connectivity-binding
+  configMapName: cc-test-connectivity-proxy-info
+destinations:
+  serviceOfferingName: destination
+  servicePlanName: lite
+  parameters:
+    version: 1.0.0
